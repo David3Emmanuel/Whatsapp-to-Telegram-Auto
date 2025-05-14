@@ -23,6 +23,7 @@ export async function createWhatsAppSocket(logger: ILogger) {
       creds: state.creds,
       keys: makeCacheableSignalKeyStore(state.keys, logger),
     },
+    shouldSyncHistoryMessage: () => false,
   })
 
   try {
