@@ -17,6 +17,7 @@ import {
 } from './helpers'
 import { showQRCode } from './helpers'
 import { AUTH_FOLDER_PATH, CONNECTION_MESSAGES } from './constants'
+import { MessageFilter, RegexCriteria, ReplyMessageCriteria } from './filters'
 
 export async function createWhatsAppSocket(logger: ILogger): Promise<WASocket> {
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_FOLDER_PATH)
@@ -80,7 +81,25 @@ function handleMessages(socket: WASocket) {
 }
 
 function handleMessage(message: WAMessage) {
+  // Log all messages for debugging
   logMessageToJson(message)
+  // Example filter: Forward messages that are replies
+  // Main message should match a course code pattern (#ABC 123)
+  // And the replied message should contain "assignment"
+  const filter = new MessageFilter('Courses', [
+    new ReplyMessageCriteria(
+      new RegexCriteria(/#[A-Z]{3}\s?\d{3}|#GENERAL/), // Main message criteria
+      undefined, // Replied message criteria
+    ),
+  ])
+
+  if (filter.matches(message)) {
+    // Log the message with the filter name
+    console.log(`Message matched filter: ${filter.getDescription()}`)
+    // Use the filter's built-in logging method
+    filter.logMatch(message)
+    // Here you would add the code to forward the message to Telegram
+  }
 }
 
 async function handleDisconnect(reject: (reason?: any) => void, error?: Error) {
