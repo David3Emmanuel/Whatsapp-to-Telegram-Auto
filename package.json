@@ -13,13 +13,16 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@hapi/boom": "^10.0.1",
     "baileys": "^6.7.16",
     "express": "^5.1.0",
-    "pino": "^9.6.0"
+    "pino": "^9.6.0",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "@types/express": "^5.0.1",
     "@types/node": "^22.15.18",
+    "@types/qrcode": "^1.5.5",
     "nodemon": "^3.1.10",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"

@@ -1,13 +1,13 @@
 import express from 'express'
 import type { Request, Response } from 'express'
 import { createWhatsAppSocket } from './whatsapp'
-
 import initializeLogger from './initializeLogger'
+import { CONNECTION_MESSAGES } from './constants'
 
 async function main() {
   const logger = initializeLogger()
   const whatsapp = await createWhatsAppSocket(logger)
-  console.log('WhatsApp socket is ready.')
+  console.log(CONNECTION_MESSAGES.SERVER_READY)
 
   const app = express()
   const port = process.env.PORT || 3001
