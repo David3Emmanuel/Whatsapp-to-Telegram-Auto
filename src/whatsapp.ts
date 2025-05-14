@@ -12,7 +12,7 @@ import { deleteQRCode, deleteAuthInfo, ReconnectError } from './helpers'
 import { showQRCode } from './helpers'
 import { AUTH_FOLDER_PATH, CONNECTION_MESSAGES } from './constants'
 
-export async function createWhatsAppSocket(logger: ILogger) {
+export async function createWhatsAppSocket(logger: ILogger): Promise<WASocket> {
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_FOLDER_PATH)
   const { version, isLatest } = await fetchLatestBaileysVersion()
   console.log(`using WA v${version.join('.')}, isLatest: ${isLatest}`)
@@ -34,6 +34,8 @@ export async function createWhatsAppSocket(logger: ILogger) {
       return await createWhatsAppSocket(logger)
     } else throw error
   }
+
+  return socket satisfies WASocket
 }
 
 function connectSocket(
@@ -61,6 +63,7 @@ function connectSocket(
     )
   })
 }
+
 async function handleDisconnect(reject: (reason?: any) => void, error?: Error) {
   {
     const statusCode = (error as Boom)?.output?.statusCode
