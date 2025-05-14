@@ -83,12 +83,10 @@ function handleMessages(socket: WASocket) {
 function handleMessage(message: WAMessage) {
   // Log all messages for debugging
   logMessageToJson(message)
-  // Example filter: Forward messages that are replies
-  // Main message should match a course code pattern (#ABC 123)
-  // And the replied message should contain "assignment"
+  // Example filter: Forward replies that contain course codes
   const filter = new MessageFilter('Courses', [
     new ReplyMessageCriteria(
-      new RegexCriteria(/#[A-Z]{3}\s?\d{3}|#GENERAL/), // Main message criteria
+      new RegexCriteria(/#([A-Z]{3}\s?\d{3}|GENERAL)/), // Main message criteria
       undefined, // Replied message criteria
     ),
   ])
