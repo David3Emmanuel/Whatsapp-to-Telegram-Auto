@@ -14,7 +14,8 @@
   "license": "ISC",
   "dependencies": {
     "baileys": "^6.7.16",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "pino": "^9.6.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.1",
