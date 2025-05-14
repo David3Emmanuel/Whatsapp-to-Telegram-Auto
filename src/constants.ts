@@ -5,6 +5,7 @@ export const APP_NAME = 'Whatsapp-to-Telegram-Auto'
 export const AUTH_FOLDER_PATH = './baileys_auth_info'
 export const LOGS_FOLDER_PATH = './logs'
 export const LOG_FILE_PATH = './logs/wa-logs.txt'
+export const MESSAGES_LOG_FILE_PATH = './logs/messages.json'
 export const QR_CODE_PATH = './qrcode.png'
 
 // WhatsApp Constants

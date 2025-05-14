@@ -5,10 +5,16 @@ import makeWASocket, {
   fetchLatestBaileysVersion,
   DisconnectReason,
   type WASocket,
-  ConnectionState,
+  type ConnectionState,
+  type WAMessage,
 } from 'baileys'
-import { ILogger } from 'baileys/lib/Utils/logger'
-import { deleteQRCode, deleteAuthInfo, ReconnectError } from './helpers'
+import type { ILogger } from 'baileys/lib/Utils/logger'
+import {
+  deleteQRCode,
+  deleteAuthInfo,
+  ReconnectError,
+  logMessageToJson,
+} from './helpers'
 import { showQRCode } from './helpers'
 import { AUTH_FOLDER_PATH, CONNECTION_MESSAGES } from './constants'
 
@@ -34,6 +40,8 @@ export async function createWhatsAppSocket(logger: ILogger): Promise<WASocket> {
       return await createWhatsAppSocket(logger)
     } else throw error
   }
+
+  handleMessages(socket)
 
   return socket satisfies WASocket
 }
@@ -62,6 +70,17 @@ function connectSocket(
       },
     )
   })
+}
+
+function handleMessages(socket: WASocket) {
+  socket.ev.on('messages.upsert', async ({ type, messages }) => {
+    if (type !== 'notify') return
+    for (const message of messages) handleMessage(message)
+  })
+}
+
+function handleMessage(message: WAMessage) {
+  logMessageToJson(message)
 }
 
 async function handleDisconnect(reject: (reason?: any) => void, error?: Error) {
