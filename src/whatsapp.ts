@@ -21,13 +21,14 @@ import {
   AUTH_FOLDER_PATH,
   CONNECTION_MESSAGES,
   TELEGRAM_CHAT_ID,
+  MAX_CONSECUTIVE_ERRORS,
+  ERROR_THRESHOLD_TIME_MS,
+  HEALTH_CHECK_INTERVAL,
 } from './constants'
 import { MessageFilter, RegexCriteria, ReplyMessageCriteria } from './filters'
 import { whatsappToTelegram, extractMessageText } from './bridge'
 
-// Constants for error handling
-const MAX_CONSECUTIVE_ERRORS = 3
-const ERROR_THRESHOLD_TIME_MS = 10 * 60 * 1000 // 10 minutes
+// Variables for error handling tracking
 let consecutiveErrors = 0
 let lastErrorTime = 0
 
@@ -222,7 +223,6 @@ async function handleDisconnect(reject: (reason?: any) => void, error?: Error) {
  * Set up periodic health checks for WhatsApp connection
  */
 function setupConnectionHealthCheck(socket: WASocket): void {
-  const HEALTH_CHECK_INTERVAL = 5 * 60 * 1000 // 5 minutes
   setInterval(async () => {
     try {
       // Try to ping to check connection

@@ -46,4 +46,9 @@ export const ERROR_MESSAGES = {
     'Shutting down server gracefully after WhatsApp connection failure.',
 }
 
+// Error Handling Constants
+export const MAX_CONSECUTIVE_ERRORS = 3
+export const ERROR_THRESHOLD_TIME_MS = 10 * 60 * 1000 // 10 minutes
+export const HEALTH_CHECK_INTERVAL = 5 * 60 * 1000 // 5 minutes
+
 export const LOGGER_LEVEL = 'trace'
