@@ -10,7 +10,7 @@ import {
  * @param message The WhatsApp message object
  * @returns The extracted text content
  */
-function extractMessageText(message: WAMessage): string {
+export function extractMessageText(message: WAMessage): string {
   const messageContent = message.message
   if (!messageContent) return ''
 
@@ -35,11 +35,13 @@ function extractMessageText(message: WAMessage): string {
  * @param message The WhatsApp message to forward
  * @param telegramChatId The target Telegram chat ID
  * @param includeSender Whether to include sender name in the forwarded message (default: true)
+ * @param topicName Optional topic name to send message under
  */
 export async function whatsappToTelegram(
   message: WAMessage,
   telegramChatId: string | number,
   includeSender: boolean = true,
+  topicName?: string,
 ) {
   try {
     const messageContent = message.message
@@ -47,10 +49,12 @@ export async function whatsappToTelegram(
     const senderName = message.pushName || 'Unknown'
     const msgPrefix = includeSender ? `*${senderName}*:\n\n` : ''
 
-    // Handle text messages
+    if (topicName) {
+      console.log(`Forwarding message to topic: ${topicName}`)
+    } // Handle text messages
     if (messageContent.conversation || messageContent.extendedTextMessage) {
       const text = extractMessageText(message)
-      await sendTelegramMessage(telegramChatId, msgPrefix + text)
+      await sendTelegramMessage(telegramChatId, msgPrefix + text, topicName)
     }
     // Handle image messages
     else if (messageContent.imageMessage) {
@@ -58,7 +62,12 @@ export async function whatsappToTelegram(
       const caption = messageContent.imageMessage.caption
         ? msgPrefix + messageContent.imageMessage.caption
         : msgPrefix
-      await sendTelegramPhoto(telegramChatId, media as Buffer, caption)
+      await sendTelegramPhoto(
+        telegramChatId,
+        media as Buffer,
+        caption,
+        topicName,
+      )
     }
     // Handle document messages
     else if (messageContent.documentMessage) {
@@ -66,7 +75,15 @@ export async function whatsappToTelegram(
       const caption = messageContent.documentMessage.caption
         ? msgPrefix + messageContent.documentMessage.caption
         : msgPrefix
-      await sendTelegramDocument(telegramChatId, media as Buffer, caption)
+      const filename = messageContent.documentMessage.fileName || undefined
+      const contentType = messageContent.documentMessage.mimetype || undefined
+      await sendTelegramDocument(
+        telegramChatId,
+        media as Buffer,
+        { filename, contentType },
+        caption,
+        topicName,
+      )
     }
     // Handle other types as needed
     else {
@@ -74,6 +91,7 @@ export async function whatsappToTelegram(
       await sendTelegramMessage(
         telegramChatId,
         `${msgPrefix}[Sent a message that cannot be displayed]`,
+        topicName,
       )
     }
   } catch (error) {

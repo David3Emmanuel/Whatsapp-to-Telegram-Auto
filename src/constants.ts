@@ -1,6 +1,4 @@
-import { WAMessage } from 'baileys'
 import dotenv from 'dotenv'
-import { BaseMessageCriteria } from './filters'
 
 dotenv.config()
 
@@ -13,6 +11,7 @@ export const LOGS_FOLDER_PATH = './logs'
 export const LOG_FILE_PATH = './logs/wa-logs.txt'
 export const MESSAGES_LOG_FILE_PATH = './logs/messages.json'
 export const QR_CODE_PATH = './qrcode.png'
+export const TOPIC_MAP_FILE_PATH = './topic-map.json'
 
 // Telegram Constants
 export const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || ''

@@ -88,7 +88,7 @@ export async function logMessageToJson(message: any): Promise<void> {
       'utf8',
     )
 
-    console.log(`Message logged to ${MESSAGES_LOG_FILE_PATH}`)
+    // console.log(`Message logged to ${MESSAGES_LOG_FILE_PATH}`)
   } catch (error) {
     console.error('Error logging message to JSON:', error)
   }

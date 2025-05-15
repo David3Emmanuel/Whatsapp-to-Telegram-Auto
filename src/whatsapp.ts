@@ -22,7 +22,7 @@ import {
   TELEGRAM_CHAT_ID,
 } from './constants'
 import { MessageFilter, RegexCriteria, ReplyMessageCriteria } from './filters'
-import { whatsappToTelegram } from './bridge'
+import { whatsappToTelegram, extractMessageText } from './bridge'
 
 export async function createWhatsAppSocket(logger: ILogger): Promise<WASocket> {
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_FOLDER_PATH)
@@ -96,7 +96,6 @@ function handleMessage(message: WAMessage) {
       undefined, // Replied message criteria
     ),
   ])
-
   if (filter.matches(message)) {
     // Log the message with the filter name
     console.log(`Message matched filter: ${filter.getDescription()}`)
@@ -105,13 +104,30 @@ function handleMessage(message: WAMessage) {
 
     // Get the quoted message
     const quotedMessage = getQuotedMessage(message)
+    // Extract the topic name from the message (removing the # symbol)
+    const messageText = extractMessageText(message)
+    const topicMatch = messageText.match(/#([A-Z]{3}\s?\d{3}|GENERAL)/)
+    let topicName = topicMatch ? topicMatch[1].trim() : undefined
+
+    // Remove spaces in the topic name to match the format in the topic map
+    if (topicName && topicName !== 'GENERAL') {
+      topicName = topicName.replace(/\s+/, ' ')
+    }
+
+    if (topicName) {
+      console.log(`Extracted topic: ${topicName}`)
+    }
 
     // Forward the message to Telegram
     try {
       if (TELEGRAM_CHAT_ID) {
         if (quotedMessage) {
-          whatsappToTelegram(quotedMessage, TELEGRAM_CHAT_ID, false)
-          console.log('Quoted message forwarded to Telegram')
+          whatsappToTelegram(quotedMessage, TELEGRAM_CHAT_ID, false, topicName)
+          console.log(
+            `Quoted message forwarded to Telegram${
+              topicName ? ` under topic ${topicName}` : ''
+            }`,
+          )
         } else {
           console.warn('No quoted message found in the reply')
         }
