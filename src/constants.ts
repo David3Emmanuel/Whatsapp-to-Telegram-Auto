@@ -23,6 +23,7 @@ export const QR_CODE_MESSAGES = {
   RECEIVED: 'QR Code received...',
   SAVED: 'QR Code saved as qrcode.png',
   DELETED: 'QR code image deleted',
+  VIEW: 'QR code can be viewed at',
 }
 
 export const CONNECTION_MESSAGES = {
