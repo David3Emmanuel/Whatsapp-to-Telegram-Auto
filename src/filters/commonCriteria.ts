@@ -1,5 +1,6 @@
 import { WAMessage } from 'baileys'
 import { BaseMessageCriteria } from './messageCriteria'
+import { getQuotedMessage } from '../helpers'
 
 /**
  * Checks if a message comes from a specific contact or group
@@ -181,7 +182,7 @@ export class ReplyMessageCriteria extends BaseMessageCriteria {
     if (!this.repliedMessageCriteria) return true
 
     // Get the quoted message and apply the criteria
-    const quotedMessage = this.getQuotedMessage(message)
+    const quotedMessage = getQuotedMessage(message)
     if (!quotedMessage) return false
 
     return this.repliedMessageCriteria.matches(quotedMessage)
@@ -203,34 +204,6 @@ export class ReplyMessageCriteria extends BaseMessageCriteria {
     return !!contextInfo?.stanzaId && !!contextInfo?.participant
   }
 
-  /**
-   * Get the quoted message from a reply
-   */
-  private getQuotedMessage(message: WAMessage): WAMessage | null {
-    // Extract contextInfo from different message types
-    const contextInfo =
-      message.message?.extendedTextMessage?.contextInfo ||
-      message.message?.imageMessage?.contextInfo ||
-      message.message?.videoMessage?.contextInfo ||
-      message.message?.audioMessage?.contextInfo ||
-      message.message?.documentMessage?.contextInfo ||
-      message.message?.stickerMessage?.contextInfo
-
-    if (!contextInfo || !contextInfo.quotedMessage) return null
-
-    // Construct a message object for the quoted message
-    const quotedMessage: WAMessage = {
-      key: {
-        remoteJid: message.key.remoteJid,
-        fromMe: contextInfo.participant === 'self', // Simplified
-        id: contextInfo.stanzaId,
-        participant: contextInfo.participant,
-      },
-      message: contextInfo.quotedMessage,
-    }
-
-    return quotedMessage
-  }
   getDescription(): string {
     let description = 'Is a reply'
 

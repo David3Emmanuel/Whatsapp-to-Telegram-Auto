@@ -7,6 +7,7 @@ import makeWASocket, {
   type WASocket,
   type ConnectionState,
   type WAMessage,
+  proto,
 } from 'baileys'
 import type { ILogger } from 'baileys/lib/Utils/logger'
 import {
@@ -15,18 +16,18 @@ import {
   ReconnectError,
   logMessageToJson,
   notifyAdminAndShutdown,
+  getQuotedMessage,
 } from './helpers'
 import { showQRCode } from './helpers'
 import {
   AUTH_FOLDER_PATH,
   CONNECTION_MESSAGES,
-  TELEGRAM_CHAT_ID,
   MAX_CONSECUTIVE_ERRORS,
   ERROR_THRESHOLD_TIME_MS,
   HEALTH_CHECK_INTERVAL,
 } from './constants'
 import { MessageFilter, RegexCriteria, ReplyMessageCriteria } from './filters'
-import { whatsappToTelegram, extractMessageText } from './bridge'
+import { extractMessageText, forwardQuotedMessageToTelegram } from './bridge'
 
 // Variables for error handling tracking
 let consecutiveErrors = 0
@@ -56,8 +57,6 @@ export async function createWhatsAppSocket(logger: ILogger): Promise<WASocket> {
   }
 
   handleMessages(socket)
-
-  // Setup regular health check for WhatsApp connection
   setupConnectionHealthCheck(socket)
 
   return socket satisfies WASocket
@@ -76,9 +75,8 @@ function connectSocket(
 
         if (qr) await showQRCode(qr)
 
-        if (connection === 'close') {
+        if (connection === 'close')
           await handleDisconnect(reject, lastDisconnect?.error)
-        }
 
         if (connection === 'open') {
           console.log(CONNECTION_MESSAGES.ESTABLISHED)
@@ -134,58 +132,8 @@ function handleMessage(message: WAMessage) {
     }
 
     // Forward the message to Telegram
-    try {
-      if (TELEGRAM_CHAT_ID) {
-        if (quotedMessage) {
-          whatsappToTelegram(quotedMessage, TELEGRAM_CHAT_ID, false, topicName)
-          console.log(
-            `Quoted message forwarded to Telegram${
-              topicName ? ` under topic ${topicName}` : ''
-            }`,
-          )
-        } else {
-          console.warn('No quoted message found in the reply')
-        }
-      } else {
-        console.warn('Message matched filter but TELEGRAM_CHAT_ID is not set')
-      }
-    } catch (error) {
-      console.error('Error forwarding message to Telegram:', error)
-    }
+    forwardQuotedMessageToTelegram(quotedMessage, topicName)
   }
-}
-
-/**
- * Extract quoted message from a reply
- */
-function getQuotedMessage(message: WAMessage): WAMessage | null {
-  // Extract contextInfo from different message types
-  const contextInfo =
-    message.message?.extendedTextMessage?.contextInfo ||
-    message.message?.imageMessage?.contextInfo ||
-    message.message?.videoMessage?.contextInfo ||
-    message.message?.audioMessage?.contextInfo ||
-    message.message?.documentMessage?.contextInfo ||
-    message.message?.stickerMessage?.contextInfo
-
-  if (!contextInfo || !contextInfo.quotedMessage) return null
-
-  // Construct a message object for the quoted message
-  const quotedMessage: WAMessage = {
-    key: {
-      remoteJid: message.key.remoteJid,
-      fromMe: contextInfo.participant === 'self',
-      id: contextInfo.stanzaId,
-      participant: contextInfo.participant,
-    },
-    message: contextInfo.quotedMessage,
-    messageTimestamp: message.messageTimestamp, // Use the same timestamp
-    pushName: contextInfo.participant
-      ? contextInfo.participant.split('@')[0]
-      : 'Unknown',
-  }
-
-  return quotedMessage
 }
 
 async function handleDisconnect(reject: (reason?: any) => void, error?: Error) {

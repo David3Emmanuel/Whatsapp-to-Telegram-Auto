@@ -4,6 +4,7 @@ import {
   sendTelegramPhoto,
   sendTelegramDocument,
 } from './telegram'
+import { TELEGRAM_CHAT_ID } from './constants'
 
 /**
  * Extract text content from a WhatsApp message
@@ -98,18 +99,31 @@ export async function whatsappToTelegram(
     console.error('Error forwarding message to Telegram:', error)
   }
 }
-
 /**
- * Forward a Telegram message to WhatsApp
- * @param message The Telegram message to forward
- * @param whatsappTarget The WhatsApp target (group or user)
+ * Forward a quoted WhatsApp message to Telegram
+ * @param quotedMessage The quoted WhatsApp message to forward
+ * @param topicName Optional topic name to send message under
  */
-export async function telegramToWhatsapp(
-  telegramMessage: any,
-  whatsappSocket: any,
-  whatsappTarget: string,
+export function forwardQuotedMessageToTelegram(
+  quotedMessage: WAMessage | null,
+  topicName: string | undefined,
 ) {
-  // Implementation for Telegram to WhatsApp forwarding
-  // This would use the WhatsApp socket to send messages
-  // Not fully implemented in this example
+  try {
+    if (TELEGRAM_CHAT_ID) {
+      if (quotedMessage) {
+        whatsappToTelegram(quotedMessage, TELEGRAM_CHAT_ID, false, topicName)
+        console.log(
+          `Quoted message forwarded to Telegram${
+            topicName ? ` under topic ${topicName}` : ''
+          }`,
+        )
+      } else {
+        console.warn('No quoted message found in the reply')
+      }
+    } else {
+      console.warn('Message matched filter but TELEGRAM_CHAT_ID is not set')
+    }
+  } catch (error) {
+    console.error('Error forwarding message to Telegram:', error)
+  }
 }
