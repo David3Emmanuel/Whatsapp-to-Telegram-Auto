@@ -14,6 +14,7 @@ import {
   deleteAuthInfo,
   ReconnectError,
   logMessageToJson,
+  notifyAdminAndShutdown,
 } from './helpers'
 import { showQRCode } from './helpers'
 import {
@@ -23,6 +24,12 @@ import {
 } from './constants'
 import { MessageFilter, RegexCriteria, ReplyMessageCriteria } from './filters'
 import { whatsappToTelegram, extractMessageText } from './bridge'
+
+// Constants for error handling
+const MAX_CONSECUTIVE_ERRORS = 3
+const ERROR_THRESHOLD_TIME_MS = 10 * 60 * 1000 // 10 minutes
+let consecutiveErrors = 0
+let lastErrorTime = 0
 
 export async function createWhatsAppSocket(logger: ILogger): Promise<WASocket> {
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_FOLDER_PATH)
@@ -49,6 +56,9 @@ export async function createWhatsAppSocket(logger: ILogger): Promise<WASocket> {
 
   handleMessages(socket)
 
+  // Setup regular health check for WhatsApp connection
+  setupConnectionHealthCheck(socket)
+
   return socket satisfies WASocket
 }
 
@@ -65,12 +75,16 @@ function connectSocket(
 
         if (qr) await showQRCode(qr)
 
-        if (connection === 'close')
+        if (connection === 'close') {
           await handleDisconnect(reject, lastDisconnect?.error)
+        }
 
         if (connection === 'open') {
           console.log(CONNECTION_MESSAGES.ESTABLISHED)
           await deleteQRCode()
+          // Reset error counter when connection is successful
+          consecutiveErrors = 0
+          lastErrorTime = 0
           resolve()
         }
       },
@@ -174,17 +188,68 @@ function getQuotedMessage(message: WAMessage): WAMessage | null {
 }
 
 async function handleDisconnect(reject: (reason?: any) => void, error?: Error) {
-  {
-    const statusCode = (error as Boom)?.output?.statusCode
-    console.log(CONNECTION_MESSAGES.CLOSED, error?.message)
-    await deleteQRCode()
+  const statusCode = (error as Boom)?.output?.statusCode
+  console.log(CONNECTION_MESSAGES.CLOSED, error?.message)
+  await deleteQRCode()
 
-    if (statusCode === DisconnectReason.restartRequired)
-      reject(new ReconnectError())
-    else if (statusCode === DisconnectReason.loggedOut) {
-      console.log(CONNECTION_MESSAGES.LOGGED_OUT)
-      await deleteAuthInfo()
-      reject(new ReconnectError())
-    } else reject(CONNECTION_MESSAGES.CLOSED_UNKNOWN)
+  // Track errors
+  const now = Date.now()
+  if (now - lastErrorTime < ERROR_THRESHOLD_TIME_MS) {
+    consecutiveErrors++
+  } else {
+    consecutiveErrors = 1 // Reset but count the current error
   }
+  lastErrorTime = now
+
+  if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+    // Critical failure detected, notify admin and shut down
+    return await notifyAdminAndShutdown(
+      error,
+      `Multiple WhatsApp connection failures (${consecutiveErrors})`,
+    )
+  }
+
+  if (statusCode === DisconnectReason.restartRequired)
+    reject(new ReconnectError())
+  else if (statusCode === DisconnectReason.loggedOut) {
+    console.log(CONNECTION_MESSAGES.LOGGED_OUT)
+    await deleteAuthInfo()
+    reject(new ReconnectError())
+  } else reject(CONNECTION_MESSAGES.CLOSED_UNKNOWN)
+}
+
+/**
+ * Set up periodic health checks for WhatsApp connection
+ */
+function setupConnectionHealthCheck(socket: WASocket): void {
+  const HEALTH_CHECK_INTERVAL = 5 * 60 * 1000 // 5 minutes
+  setInterval(async () => {
+    try {
+      // Try to ping to check connection
+      try {
+        // This will throw if connection is broken
+        await socket.sendPresenceUpdate('available', '')
+
+        // If we get here, connection is still working
+        consecutiveErrors = 0
+      } catch (pingError) {
+        console.error('Health check failed: WhatsApp connection test failed')
+
+        // Connection is definitely broken
+        if (++consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+          await notifyAdminAndShutdown(
+            pingError,
+            'WhatsApp connection health check failed',
+          )
+        }
+      }
+    } catch (error) {
+      console.error('Error during WhatsApp connection health check:', error)
+
+      // Check if this is a persistent connection issue
+      if (++consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+        await notifyAdminAndShutdown(error, 'Multiple failed health checks')
+      }
+    }
+  }, HEALTH_CHECK_INTERVAL)
 }

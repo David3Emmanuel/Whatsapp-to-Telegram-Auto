@@ -16,6 +16,7 @@ export const TOPIC_MAP_FILE_PATH = './topic-map.json'
 // Telegram Constants
 export const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || ''
 export const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || ''
+export const TELEGRAM_ADMIN_ID = process.env.TELEGRAM_ADMIN_ID || ''
 
 // WhatsApp Constants
 export const QR_CODE_MESSAGES = {
@@ -39,6 +40,9 @@ export const ERROR_MESSAGES = {
   QR_CODE_DELETE: 'Failed to delete QR code image:',
   AUTH_INFO_DELETE: 'Failed to delete auth info:',
   SERVER_START: 'Error starting the server:',
+  WHATSAPP_CONNECTION: 'Critical WhatsApp connection error:',
+  GRACEFUL_SHUTDOWN:
+    'Shutting down server gracefully after WhatsApp connection failure.',
 }
 
 export const LOGGER_LEVEL = 'trace'
