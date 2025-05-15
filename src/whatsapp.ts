@@ -209,12 +209,16 @@ async function handleDisconnect(reject: (reason?: any) => void, error?: Error) {
       `Multiple WhatsApp connection failures (${consecutiveErrors})`,
     )
   }
-
   if (statusCode === DisconnectReason.restartRequired)
     reject(new ReconnectError())
   else if (statusCode === DisconnectReason.loggedOut) {
     console.log(CONNECTION_MESSAGES.LOGGED_OUT)
     await deleteAuthInfo()
+    // Notify admin about logged out status
+    await notifyAdminAndShutdown(
+      new Error('WhatsApp logged out'),
+      'WhatsApp account logged out',
+    )
     reject(new ReconnectError())
   } else reject(CONNECTION_MESSAGES.CLOSED_UNKNOWN)
 }
