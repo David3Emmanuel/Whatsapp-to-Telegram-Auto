@@ -16,8 +16,13 @@ import {
   logMessageToJson,
 } from './helpers'
 import { showQRCode } from './helpers'
-import { AUTH_FOLDER_PATH, CONNECTION_MESSAGES } from './constants'
+import {
+  AUTH_FOLDER_PATH,
+  CONNECTION_MESSAGES,
+  TELEGRAM_CHAT_ID,
+} from './constants'
 import { MessageFilter, RegexCriteria, ReplyMessageCriteria } from './filters'
+import { whatsappToTelegram } from './bridge'
 
 export async function createWhatsAppSocket(logger: ILogger): Promise<WASocket> {
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_FOLDER_PATH)
@@ -83,6 +88,7 @@ function handleMessages(socket: WASocket) {
 function handleMessage(message: WAMessage) {
   // Log all messages for debugging
   logMessageToJson(message)
+
   // Example filter: Forward replies that contain course codes
   const filter = new MessageFilter('Courses', [
     new ReplyMessageCriteria(
@@ -96,8 +102,59 @@ function handleMessage(message: WAMessage) {
     console.log(`Message matched filter: ${filter.getDescription()}`)
     // Use the filter's built-in logging method
     filter.logMatch(message)
-    // Here you would add the code to forward the message to Telegram
+
+    // Get the quoted message
+    const quotedMessage = getQuotedMessage(message)
+
+    // Forward the message to Telegram
+    try {
+      if (TELEGRAM_CHAT_ID) {
+        if (quotedMessage) {
+          whatsappToTelegram(quotedMessage, TELEGRAM_CHAT_ID, false)
+          console.log('Quoted message forwarded to Telegram')
+        } else {
+          console.warn('No quoted message found in the reply')
+        }
+      } else {
+        console.warn('Message matched filter but TELEGRAM_CHAT_ID is not set')
+      }
+    } catch (error) {
+      console.error('Error forwarding message to Telegram:', error)
+    }
   }
+}
+
+/**
+ * Extract quoted message from a reply
+ */
+function getQuotedMessage(message: WAMessage): WAMessage | null {
+  // Extract contextInfo from different message types
+  const contextInfo =
+    message.message?.extendedTextMessage?.contextInfo ||
+    message.message?.imageMessage?.contextInfo ||
+    message.message?.videoMessage?.contextInfo ||
+    message.message?.audioMessage?.contextInfo ||
+    message.message?.documentMessage?.contextInfo ||
+    message.message?.stickerMessage?.contextInfo
+
+  if (!contextInfo || !contextInfo.quotedMessage) return null
+
+  // Construct a message object for the quoted message
+  const quotedMessage: WAMessage = {
+    key: {
+      remoteJid: message.key.remoteJid,
+      fromMe: contextInfo.participant === 'self',
+      id: contextInfo.stanzaId,
+      participant: contextInfo.participant,
+    },
+    message: contextInfo.quotedMessage,
+    messageTimestamp: message.messageTimestamp, // Use the same timestamp
+    pushName: contextInfo.participant
+      ? contextInfo.participant.split('@')[0]
+      : 'Unknown',
+  }
+
+  return quotedMessage
 }
 
 async function handleDisconnect(reject: (reason?: any) => void, error?: Error) {
