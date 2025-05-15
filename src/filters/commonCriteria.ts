@@ -1,6 +1,6 @@
 import { WAMessage } from 'baileys'
 import { BaseMessageCriteria } from './messageCriteria'
-import { getQuotedMessage } from '../helpers'
+import getQuotedMessage from '../helpers/getQuotedMessage'
 
 /**
  * Checks if a message comes from a specific contact or group
