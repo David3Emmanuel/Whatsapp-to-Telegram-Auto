@@ -11,6 +11,8 @@ import { initTelegramBot } from './telegram'
 import dotenv from 'dotenv'
 import fs from 'fs'
 import path from 'path'
+import type { ILogger } from 'baileys/lib/Utils/logger'
+import type { WASocket } from 'baileys'
 
 // Load environment variables from .env file
 dotenv.config()
@@ -18,24 +20,17 @@ dotenv.config()
 async function main() {
   const logger = initializeLogger()
 
-  // Initialize WhatsApp connection
-  const whatsapp = await createWhatsAppSocket(logger)
-  console.log(CONNECTION_MESSAGES.SERVER_READY)
+  let whatsapp: WASocket
+  init(logger).then((whatsappSocket) => {
+    whatsapp = whatsappSocket
+  })
 
-  // Initialize Telegram bot
-  if (TELEGRAM_BOT_TOKEN) {
-    initTelegramBot(TELEGRAM_BOT_TOKEN)
-    console.log('Telegram bot initialized successfully')
-  } else {
-    console.warn(
-      'TELEGRAM_BOT_TOKEN not found. Telegram functionality will not work.',
-    )
-  }
   const app = express()
   const port = process.env.PORT || 3001
 
   app.get('/', (req: Request, res: Response) => {
-    res.send('WhatsApp to Telegram Bridge - Server Running')
+    if (whatsapp) res.send('WhatsApp to Telegram Bridge - Server Running')
+    else res.send('Server is not running')
   })
 
   // QR code endpoint to display the login QR code
@@ -73,3 +68,20 @@ async function main() {
 main().catch((error) => {
   console.error('Error starting the server:', error)
 })
+
+async function init(logger: ILogger) {
+  // Initialize WhatsApp connection
+  const whatsapp = await createWhatsAppSocket(logger)
+  console.log(CONNECTION_MESSAGES.SERVER_READY)
+
+  // Initialize Telegram bot
+  if (TELEGRAM_BOT_TOKEN) {
+    initTelegramBot(TELEGRAM_BOT_TOKEN)
+    console.log('Telegram bot initialized successfully')
+  } else {
+    console.warn(
+      'TELEGRAM_BOT_TOKEN not found. Telegram functionality will not work.',
+    )
+  }
+  return whatsapp
+}
